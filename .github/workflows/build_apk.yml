@@ -1,0 +1,47 @@
+name: Flutter Build APK
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      # 1. Check out the repository code
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      # 2. Setup Java Environment required for Android builds
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'zulu'
+          java-version: '17'
+
+      # 3. Setup Flutter Environment
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+          # This automatically reads your version from pubspec.yaml
+
+      # 4. Get all package dependencies
+      - name: Install Dependencies
+        run: flutter pub get
+
+      # 5. Compile the Production Release APK
+      - name: Build Release APK
+        run: flutter build apk --release
+
+      # 6. Upload the compiled APK so you can download it from GitHub UI
+      - name: Upload APK Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: my-rabai-release-apk
+          path: build/app/outputs/flutter-apk/app-release.apk
