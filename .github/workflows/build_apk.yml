@@ -13,33 +13,30 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # 1. Check out the repository code
       - name: Checkout Code
         uses: actions/checkout@v4
 
-      # 2. Setup Java Environment required for Android builds
       - name: Setup Java
         uses: actions/setup-java@v4
         with:
           distribution: 'zulu'
           java-version: '17'
 
-      # 3. Setup Flutter Environment
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
           channel: 'stable'
-          # This automatically reads your version from pubspec.yaml
+          cache: true
 
-      # 4. Get all package dependencies
-      - name: Install Dependencies
-        run: flutter pub get
+      - name: Clean Install Dependencies
+        run: |
+          flutter pub get
+          flutter clean
 
-      # 5. Compile the Production Release APK
+       Silber build command to compile release package
       - name: Build Release APK
-        run: flutter build apk --release
+        run: flutter build apk --release --no-pub
 
-      # 6. Upload the compiled APK so you can download it from GitHub UI
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
         with:
