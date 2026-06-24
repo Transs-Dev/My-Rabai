@@ -1,479 +1,966 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:my_rabai/features/admin/data/bursary_management_provider.dart';
 
-class HomeScreen extends ConsumerWidget {
+class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final primaryColor = Theme.of(context).primaryColor;
-    final periodAsync = ref.watch(bursaryPeriodStreamProvider);
+  State<HomeScreen> createState() => _HomeScreenState();
+}
 
+class _HomeScreenState extends State<HomeScreen> {
+  // Global Keys for programmatic section jump redirection
+  final GlobalKey _discoverKey = GlobalKey();
+  final GlobalKey _opportunitiesKey = GlobalKey();
+  final GlobalKey _feedbackKey = GlobalKey();
+  final GlobalKey _leadershipKey = GlobalKey();
+
+  // Feedback Form Controllers & Key
+  final _formKey = GlobalKey<FormState>();
+  final TextEditingController _nameController = TextEditingController();
+  final TextEditingController _emailController = TextEditingController();
+  final TextEditingController _messageController = TextEditingController();
+
+  // Expandable description card matrices
+  final List<bool> _isCardExpanded = [false, false, false, false];
+
+  // Selected Category state machine for the Image Gallery Matrix
+  int _selectedGalleryCategory = 0;
+  final List<Map<String, String>> _galleryCategories = [
+    {'label': 'Schools', 'key': 'schools'},
+    {'label': 'Hospitals', 'key': 'hospitals'},
+    {'label': 'Roads', 'key': 'roads'},
+    {'label': 'Cultural Sites', 'key': 'cultural_sites'},
+    {'label': 'Community Events', 'key': 'community_events'},
+    {'label': 'Nature', 'key': 'nature'},
+  ];
+
+  @override
+  void dispose() {
+    _nameController.dispose();
+    _emailController.dispose();
+    _messageController.dispose();
+    super.dispose();
+  }
+
+  // Smooth scroll translation logic to targeting anchors
+  void _scrollToSection(GlobalKey key) {
+    final context = key.currentContext;
+    if (context != null) {
+      Scrollable.ensureVisible(
+        context,
+        duration: const Duration(milliseconds: 600),
+        curve: Curves.easeInOutCubic,
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.grey.shade50,
+      backgroundColor: const Color(0xFFF9FBFC),
       appBar: AppBar(
         backgroundColor: Colors.white,
-        elevation: 0,
-        title: Row(
-          children: [
-            Image.asset(
-              'assets/images/logo.png',
-              height: 28,
-              width: 28,
-              fit: BoxFit.contain,
-              errorBuilder: (context, error, stackTrace) {
-                return Icon(Icons.gavel_rounded, color: primaryColor, size: 24);
-              },
-            ),
-            const SizedBox(width: 10),
-            const Text(
-              'MY RABAI DIGITAL PORTAL', 
-              style: TextStyle(fontSize: 14, fontWeight: FontWeight.w900, letterSpacing: 1.2, color: Colors.black87)
-            ),
-          ],
+        elevation: 0.5,
+        centerTitle: true,
+        // FIXED: Removed 'const' before BoxFit.contain
+        title: Image.asset(
+          'assets/logo.png',
+          height: 42,
+          fit: BoxFit.contain,
+          errorBuilder: (context, error, stackTrace) {
+            // Graceful typography fallback if asset file is missing initially
+            return const Text(
+              'MY RABAI',
+              style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, letterSpacing: 3, color: Color(0xFF004D40)),
+            );
+          },
         ),
         actions: [
           IconButton(
             icon: const Icon(Icons.notifications_none_rounded, color: Colors.black87),
             onPressed: () {},
-          ),
-          const SizedBox(width: 8),
+          )
         ],
       ),
-      body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(16.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // ==========================================
-              // ZONE 1: THE GATEWAY & WELCOME BANNER
-              // ==========================================
-              const Text('Habari, Resident! 👋', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.black87)),
-              const SizedBox(height: 4),
-              Text('Welcome back to the official sub-county gateway system.', style: TextStyle(fontSize: 13, color: Colors.grey.shade600)),
-              const SizedBox(height: 16),
-
-              periodAsync.when(
-                loading: () => const LinearProgressIndicator(),
-                error: (_, __) => const SizedBox.shrink(),
-                data: (period) {
-                  if (period == null) return const SizedBox.shrink();
-                  final bool isClosed = period['is_force_closed'] ?? false;
-
-                  return Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.all(14),
-                    decoration: BoxDecoration(
-                      color: isClosed ? Colors.red.shade50 : Colors.amber.shade50,
-                      borderRadius: BorderRadius.circular(14),
-                      border: Border.all(color: isClosed ? Colors.red.shade200 : Colors.amber.shade300, width: 1),
+      body: SingleChildScrollView(
+        physics: const BouncingScrollPhysics(),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            
+            // ==========================================
+            // 1. HERO WELCOME SECTION
+            // ==========================================
+            Stack(
+              children: [
+                Container(
+                  height: 390,
+                  decoration: const BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [Color(0xFF004D40), Color(0xFF00796B)],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
                     ),
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Icon(isClosed ? Icons.lock_outline_rounded : Icons.hourglass_top_rounded, color: isClosed ? Colors.red.shade700 : Colors.amber.shade800, size: 20),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                isClosed ? 'Important Notice: Window Closed' : 'Important Notice: System Open',
-                                style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: isClosed ? Colors.red.shade900 : Colors.amber.shade900),
-                              ),
-                              const SizedBox(height: 2),
-                              Text(
-                                isClosed 
-                                  ? 'The Higher Education Bursary verification window is officially locked. Evaluation is in progress.'
-                                  : 'The current Higher Education Bursary Window is active. Submit files before the deadline.',
-                                style: TextStyle(fontSize: 12, color: isClosed ? Colors.red.shade800 : Colors.amber.shade800, height: 1.3),
-                              ),
-                            ],
-                          ),
+                  ),
+                ),
+                Positioned(
+                  right: -50,
+                  top: -20,
+                  child: Icon(Icons.wb_sunny_rounded, size: 280, color: Colors.white.withOpacity(0.04)),
+                ),
+                Padding(
+                  padding: const EdgeInsets.all(24.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const SizedBox(height: 12),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                        decoration: BoxDecoration(
+                          color: Colors.amber.shade700,
+                          borderRadius: BorderRadius.circular(30),
                         ),
-                      ],
-                    ),
-                  );
-                },
-              ),
-              const SizedBox(height: 28),
-
-              // ==========================================
-              // ZONE 2: ACTION MATRIX GRID (DOWNLOADS REMOVED)
-              // ==========================================
-              const Text('QUICK ACCESS UTILITIES', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.black54, letterSpacing: 0.5)),
-              const SizedBox(height: 12),
-              GridView.count(
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                crossAxisCount: 2,
-                crossAxisSpacing: 14,
-                mainAxisSpacing: 14,
-                childAspectRatio: 1.35,
-                children: [
-                  _buildMatrixCard(
-                    context, 
-                    title: 'Public Feedback', 
-                    subtitle: 'Report & Suggestions', 
-                    icon: Icons.chat_bubble_outline_rounded, 
-                    color: Colors.purple,
-                    destination: const PublicFeedbackPage(), 
-                  ),
-                  _buildMatrixCard(
-                    context, 
-                    title: 'Opportunities', 
-                    subtitle: 'Tenders & Jobs', 
-                    icon: Icons.card_membership_rounded, 
-                    color: Colors.orange,
-                    destination: const OpportunitiesPage(), 
-                  ),
-                  _buildMatrixCard(
-                    context, 
-                    title: 'Emergency Desk', 
-                    subtitle: 'Sub-County Contacts', 
-                    icon: Icons.phone_in_talk_rounded, 
-                    color: Colors.teal,
-                    destination: const EmergencyDeskPage(), 
-                  ),
-                ],
-              ),
-              const SizedBox(height: 32),
-              
-              // ==========================================
-              // ZONE 3: DYNAMIC COMMUNITY PULSE
-              // ==========================================
-              const Text('ONGOING WARD ACTIVITIES', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.black54, letterSpacing: 0.5)),
-              const SizedBox(height: 16),
-              ListView.builder(
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                itemCount: 2, 
-                itemBuilder: (context, index) {
-                  final activities = [
-                    {'title': 'Ruruma Youth Tree Planting Drive', 'time': 'Ongoing • Closes 4 PM', 'ward': 'Ruruma Ward'},
-                    {'title': 'Kambe-Ribe Sub-County Public Budget Hearing', 'time': 'Tomorrow • 9:00 AM', 'ward': 'Kambe Ward'}
-                  ];
-                  return IntrinsicHeight(
-                    child: Row(
-                      children: [
-                        Column(
-                          children: [
-                            Container(width: 8, height: 8, decoration: BoxDecoration(color: index == 0 ? primaryColor : Colors.grey.shade400, shape: BoxShape.circle)),
-                            Expanded(child: Container(width: 2, color: index == 1 ? Colors.transparent : Colors.grey.shade300)),
-                          ],
+                        child: const Text(
+                          "OFFICIAL DIGITAL GATEWAY",
+                          style: TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold, letterSpacing: 1),
                         ),
-                        const SizedBox(width: 16),
-                        Expanded(
-                          child: Padding(
-                            padding: const EdgeInsets.only(bottom: 20.0),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Row(
-                                  children: [
-                                    Text(activities[index]['ward']!, style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: primaryColor)),
-                                    const SizedBox(width: 8),
-                                    Text(activities[index]['time']!, style: TextStyle(fontSize: 11, color: Colors.grey.shade500)),
-                                  ],
-                                ),
-                                const SizedBox(height: 4),
-                                Text(activities[index]['title']!, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Colors.black87)),
-                              ],
+                      ),
+                      const SizedBox(height: 16),
+                      const Text(
+                        "My Rabai",
+                        style: TextStyle(fontSize: 42, fontWeight: FontWeight.w900, color: Colors.white, letterSpacing: -1),
+                      ),
+                      const Text(
+                        "Connecting People, Opportunities and Development",
+                        style: TextStyle(fontSize: 18, fontWeight: FontWeight.w500, color: Color(0xFFE0F2F1), height: 1.2),
+                      ),
+                      const SizedBox(height: 16),
+                      const Text(
+                        "Welcome to My Rabai, your digital gateway to information, opportunities, public services, development projects and community engagement within Rabai Constituency.",
+                        style: TextStyle(fontSize: 13, color: Color(0xFFB2DFDB), height: 1.5),
+                      ),
+                      const SizedBox(height: 28),
+                      
+                      // BUTTONS: Programmatic routing across the viewport
+                      Row(
+                        children: [
+                          Expanded(
+                            child: ElevatedButton.icon(
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.amber.shade700,
+                                foregroundColor: Colors.white,
+                                padding: const EdgeInsets.symmetric(vertical: 14),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                              ),
+                              icon: const Icon(Icons.explore_rounded, size: 18),
+                              label: const Text("Explore Rabai", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                              onPressed: () => _scrollToSection(_discoverKey),
                             ),
                           ),
-                        ),
-                      ],
-                    ),
-                  );
-                },
-              ),
-
-              const Text('LATEST PUBLIC OPPORTUNITIES', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.black54, letterSpacing: 0.5)),
-              const SizedBox(height: 16),
-              SizedBox(
-                height: 75,
-                child: ListView.builder(
-                  scrollDirection: Axis.horizontal,
-                  itemCount: 3,
-                  itemBuilder: (context, index) {
-                    final opportunities = [
-                      {'title': 'Mizijini Water Network Piping Tender', 'type': 'Tender'},
-                      {'title': 'Sub-County ICT Vocational Training Intake', 'type': 'Youth Program'},
-                      {'title': 'Rabai Health Center Nursing Internships', 'type': 'Employment'},
-                    ];
-                    return Container(
-                      width: 260,
-                      margin: const EdgeInsets.only(right: 24),
-                      child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text('0${index + 1}', style: TextStyle(fontSize: 28, fontWeight: FontWeight.w900, color: primaryColor.withOpacity(0.2), height: 0.9)),
                           const SizedBox(width: 12),
                           Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(opportunities[index]['type']!.toUpperCase(), style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.grey.shade500, letterSpacing: 0.5)),
-                                const SizedBox(height: 2),
-                                Text(opportunities[index]['title']!, maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Colors.black87, height: 1.2)),
-                              ],
+                            child: OutlinedButton.icon(
+                              style: OutlinedButton.styleFrom(
+                                foregroundColor: Colors.white,
+                                side: const BorderSide(color: Colors.white38, width: 1.5),
+                                padding: const EdgeInsets.symmetric(vertical: 14),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                              ),
+                              icon: const Icon(Icons.star_border_purple500_rounded, size: 18),
+                              label: const Text("Latest Opportunities", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
+                              onPressed: () => _scrollToSection(_opportunitiesKey),
                             ),
                           ),
                         ],
                       ),
-                    );
-                  },
-                ),
-              ),
-              const SizedBox(height: 16),
-
-              const Text('CITIZEN VOICE QUICK REPORT', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.black54, letterSpacing: 0.5)),
-              const SizedBox(height: 12),
-              Container(
-                decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16), border: Border.all(color: Colors.grey.shade200)),
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: TextField(
-                        decoration: InputDecoration(hintText: "What's happening in your ward today?", hintStyle: TextStyle(color: Colors.grey.shade400, fontSize: 13), border: InputBorder.none),
-                      ),
-                    ),
-                    IconButton(icon: Icon(Icons.arrow_forward_rounded, color: primaryColor), onPressed: () {}),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 36),
-
-              const Text('THE RABAI MIRROR GALLERY', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.black54, letterSpacing: 0.5)),
-              const SizedBox(height: 12),
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Expanded(
-                    child: Column(
-                      children: [
-                        _buildGalleryTile('https://images.unsplash.com/photo-1540555700478-4be289fbecef?w=500', 190, 'New School Desks Block'),
-                        const SizedBox(height: 12),
-                        _buildGalleryTile('https://images.unsplash.com/photo-1488521787991-ed7bbaae773c?w=500', 130, 'Youth Assembly'),
-                      ],
-                    ),
+                    ],
                   ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      children: [
-                        _buildGalleryTile('https://images.unsplash.com/photo-1509062522246-3755977927d7?w=500', 120, 'Graduation Day'),
-                        const SizedBox(height: 12),
-                        _buildGalleryTile('https://images.unsplash.com/photo-1574629810360-7efbbe195018?w=500', 200, 'Sub-County Cup Finals'),
-                      ],
-                    ),
+                ),
+              ],
+            ),
+
+            // ==========================================
+            // 2. LEADERSHIP MESSAGES (MP & MCA)
+            // ==========================================
+            Padding(
+              key: _leadershipKey,
+              padding: const EdgeInsets.all(24.0),
+              child: Column(
+                children: [
+                  _buildLeadershipCard(
+                    title: "Message from Our Member of Parliament",
+                    role: "MEMBER OF PARLIAMENT • RABAI CONSTITUENCY",
+                    content: "A welcoming message highlighting targeted local development, educational infrastructural support, youth economic empowerment frameworks, and sustainable community unity across all wards.",
+                    imageAssetPath: "assets/mp_photo.png",
+                  ),
+                  const SizedBox(height: 16),
+                  _buildLeadershipCard(
+                    title: "Message from Our MCA",
+                    role: "MEMBER OF COUNTY ASSEMBLY",
+                    content: "A short leadership message focusing on local structural development parameters, active grassroots community participation, and efficient service delivery tracking maps.",
+                    imageAssetPath: "assets/mca_photo.png",
                   ),
                 ],
               ),
-              const SizedBox(height: 36),
+            ),
 
-              // ==========================================
-              // ZONE 4: THE ANCHOR, FORM & DEVELOPER BASELINE
-              // ==========================================
-              const Text('OFFICIAL SYSTEM CONTACT FORM', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.black54, letterSpacing: 0.5)),
-              const SizedBox(height: 16),
-              
-              Column(
+            // ==========================================
+            // 3. WHY RABAI IS SPECIAL (Expandable Cards)
+            // ==========================================
+            _buildSectionHeader(title: "Discover Rabai", sectionKey: _discoverKey),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 24.0),
+              child: Column(
                 children: [
-                  TextFormField(
-                    decoration: InputDecoration(
-                      labelText: 'Your Name / Identity Context',
-                      labelStyle: TextStyle(fontSize: 13, color: Colors.grey.shade600),
-                      focusedBorder: UnderlineInputBorder(borderSide: BorderSide(color: primaryColor, width: 2)),
-                      enabledBorder: UnderlineInputBorder(borderSide: BorderSide(color: Colors.grey.shade300)),
-                    ),
+                  _buildExpandableCard(
+                    index: 0,
+                    title: "Rich Cultural Heritage",
+                    icon: Icons.gavel_rounded,
+                    description: "Rabai is home to a rich history, traditions and cultural diversity that continue to shape the identity of the community.",
+                    extendedText: "As a cornerstone site of early educational infrastructure and historical community squares, our cultural landscape retains robust traditional governance systems and values.",
                   ),
-                  const SizedBox(height: 14),
-                  TextFormField(
-                    maxLines: 3,
-                    decoration: InputDecoration(
-                      labelText: 'Detailed Inquiry or Desk Message Request',
-                      labelStyle: TextStyle(fontSize: 13, color: Colors.grey.shade600),
-                      focusedBorder: UnderlineInputBorder(borderSide: BorderSide(color: primaryColor, width: 2)),
-                      enabledBorder: UnderlineInputBorder(borderSide: BorderSide(color: Colors.grey.shade300)),
-                    ),
+                  _buildExpandableCard(
+                    index: 1,
+                    title: "Natural Beauty",
+                    icon: Icons.landscape_rounded,
+                    description: "Rabai offers scenic landscapes, green environments and unique natural attractions.",
+                    extendedText: "From the strictly preserved ecosystems of the UNESCO-recognized Kaya forests to verdant agricultural ridges, the region offers premier eco-tourism potential.",
                   ),
-                  const SizedBox(height: 20),
-                  SizedBox(
-                    width: double.infinity,
-                    height: 46,
-                    child: ElevatedButton(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: primaryColor,
-                        elevation: 0,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                      ),
-                      onPressed: () {},
-                      child: const Text('Dispatch Inquiry Line', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13)),
-                    ),
+                  _buildExpandableCard(
+                    index: 2,
+                    title: "Strategic Location",
+                    icon: Icons.map_rounded,
+                    description: "Rabai serves as an important connection point within the Coast Region and contributes to regional growth.",
+                    extendedText: "Positioned elegantly adjacent to key transportation arterials linking interior agricultural systems directly to the Mombasa and Kilifi market nodes.",
+                  ),
+                  _buildExpandableCard(
+                    index: 3,
+                    title: "Growing Development",
+                    icon: Icons.analytics_rounded,
+                    description: "Continuous investments in roads, schools, healthcare and public infrastructure are transforming the constituency.",
+                    extendedText: "Through active modernization protocols, we continue to verify systematic expansions across vocational labs, solar health links, and tarmac connectivity maps.",
                   ),
                 ],
               ),
-              const SizedBox(height: 40),
+            ),
+            const SizedBox(height: 24),
 
-              const Text('DIRECT HELPDESK LINES', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.black54, letterSpacing: 0.5)),
-              const SizedBox(height: 16),
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
+            // ==========================================
+            // 4. ECONOMIC ACTIVITIES
+            // ==========================================
+            _buildSectionHeader(title: "Economic Activities in Rabai"),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 24.0),
+              child: GridView.count(
+                crossAxisCount: 2,
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                mainAxisSpacing: 12,
+                crossAxisSpacing: 12,
+                childAspectRatio: 0.88,
                 children: [
-                  Expanded(
+                  _buildEconomicCard(Icons.grass_rounded, "Agriculture", "Cash crops, local food production platforms, and organic farming models."),
+                  _buildEconomicCard(Icons.pets_rounded, "Livestock Farming", "Dairy farming networks, poultry systems, and local veterinary support nodes."),
+                  _buildEconomicCard(Icons.storefront_rounded, "Small Businesses", "Vibrant local market environments, retail spaces, and MSME growth metrics."),
+                  _buildEconomicCard(Icons.paid_rounded, "Trade and Commerce", "Inter-county trading centers and cross-regional market connectivity logs."),
+                  _buildEconomicCard(Icons.local_shipping_rounded, "Transport Services", "Boda boda operational associations, mini-bus frameworks, and logistics channels."),
+                  _buildEconomicCard(Icons.forest_rounded, "Tourism Activities", "Eco-cultural forest excursions and ancestral landmark visitor path systems."),
+                ],
+              ),
+            ),
+            const SizedBox(height: 24),
+
+            // ==========================================
+            // 5. EDUCATION IN RABAI
+            // ==========================================
+            _buildSectionHeader(title: "Education and Youth Empowerment"),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 24.0),
+              child: Column(
+                children: [
+                  Row(
+                    children: [
+                      Expanded(child: _buildStatCard("70+", "Primary & Sec Schools", Icons.school_rounded, Colors.blue.shade700)),
+                      const SizedBox(width: 12),
+                      Expanded(child: _buildStatCard("4", "Technical Institutes", Icons.construction_rounded, Colors.purple.shade700)),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  Row(
+                    children: [
+                      Expanded(child: _buildStatCard("15+", "Active Youth Programs", Icons.groups_rounded, Colors.orange.shade700)),
+                      const SizedBox(width: 12),
+                      Expanded(child: _buildStatCard("100%", "Scholarship & Bursary", Icons.account_balance_wallet_rounded, Colors.green.shade700)),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  Container(
+                    padding: const EdgeInsets.all(20),
+                    decoration: BoxDecoration(
+                      gradient: const LinearGradient(colors: [Color(0xFF0D47A1), Color(0xFF1976D2)]),
+                      borderRadius: BorderRadius.circular(16),
+                    ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text('OMAR WASHE KONDE', style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.black87, letterSpacing: 0.3)),
-                        const SizedBox(height: 2),
-                        Text('System Core Architect & Developer', style: TextStyle(fontSize: 11, color: Colors.grey.shade500)),
+                        const Row(
+                          children: [
+                            Icon(Icons.workspace_premium_rounded, color: Colors.amber, size: 24),
+                            SizedBox(width: 8),
+                            Text("Empowerment & Vetting", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13)),
+                          ],
+                        ),
+                        const SizedBox(height: 8),
+                        const Text(
+                          "Bursary Support Portals Active",
+                          style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w900),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          "Verified constituency educational sponsorship application maps are processed natively through designated ward administrators.",
+                          style: TextStyle(color: Colors.white.withOpacity(0.85), fontSize: 12, height: 1.3),
+                        ),
                       ],
                     ),
+                  )
+                ],
+              ),
+            ),
+            const SizedBox(height: 24),
+
+            // ==========================================
+            // 6. HEALTHCARE SERVICES
+            // ==========================================
+            _buildSectionHeader(title: "Healthcare Services"),
+            SizedBox(
+              height: 180,
+              child: ListView(
+                scrollDirection: Axis.horizontal,
+                physics: const BouncingScrollPhysics(),
+                padding: const EdgeInsets.symmetric(horizontal: 24),
+                children: [
+                  _buildHealthcareCard("Rabai Sub-County Hospital", "Level 4 core referral hospital structure configured for 24/7 outpatient care.", Icons.local_hospital_rounded),
+                  _buildHealthcareCard("Kisauni Health Centres", "Maternal monitoring maps, outpatient immunization fields, and preventative assistance.", Icons.health_and_safety_rounded),
+                  _buildHealthcareCard("Community Health Programs", "Informed healthcare volunteers handling household diagnostic records and clinics.", Icons.volunteer_activism_rounded),
+                ],
+              ),
+            ),
+            const SizedBox(height: 24),
+
+            // ==========================================
+            // 7. ROADS AND INFRASTRUCTURE
+            // ==========================================
+            _buildSectionHeader(title: "Infrastructure Development"),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 24.0),
+              child: Container(
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: Colors.grey.shade200),
+                ),
+                child: Column(
+                  children: [
+                    _buildProgressRow("Road Tarmac & Grading Network", 0.78, "78% Completed"),
+                    const SizedBox(height: 16),
+                    _buildProgressRow("Water Projects & Piping Outlets", 0.62, "62% Active Pipeline"),
+                    const SizedBox(height: 16),
+                    _buildProgressRow("Rural Electricity Grid Transformation", 0.85, "85% Transformer Coverage"),
+                    const SizedBox(height: 16),
+                    _buildProgressRow("Public Buildings & Community Labs", 0.45, "45% Structural Phase"),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 24),
+
+            // ==========================================
+            // 8. GALLERY OF RABAI (Dynamic Automations)
+            // ==========================================
+            _buildSectionHeader(title: "Explore Rabai Gallery"),
+            SizedBox(
+              height: 38,
+              child: ListView.builder(
+                scrollDirection: Axis.horizontal,
+                padding: const EdgeInsets.symmetric(horizontal: 24),
+                itemCount: _galleryCategories.length,
+                itemBuilder: (context, index) {
+                  bool isSelected = _selectedGalleryCategory == index;
+                  return GestureDetector(
+                    onTap: () => setState(() => _selectedGalleryCategory = index),
+                    child: Container(
+                      margin: const EdgeInsets.only(right: 8),
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                      decoration: BoxDecoration(
+                        color: isSelected ? const Color(0xFF004D40) : Colors.grey.shade100,
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: Text(
+                        _galleryCategories[index]['label']!,
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                          color: isSelected ? Colors.white : Colors.black54,
+                        ),
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
+            const SizedBox(height: 12),
+            SizedBox(
+              height: 200,
+              child: ListView.builder(
+                scrollDirection: Axis.horizontal,
+                padding: const EdgeInsets.symmetric(horizontal: 24),
+                itemCount: 3,
+                itemBuilder: (context, index) {
+                  final String currentCategoryKey = _galleryCategories[_selectedGalleryCategory]['key']!;
+                  // DYNAMIC FILENAME COMPILATION STRATEGY
+                  final String expectedAssetPath = "assets/gallery_${currentCategoryKey}_${index + 1}.png";
+
+                  return Container(
+                    width: 280,
+                    margin: const EdgeInsets.only(right: 12),
+                    decoration: BoxDecoration(
+                      color: Colors.grey.shade200,
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(16),
+                      child: Stack(
+                        fit: StackFit.expand,
+                        children: [
+                          Image.asset(
+                            expectedAssetPath,
+                            fit: BoxFit.cover,
+                            errorBuilder: (context, error, stackTrace) {
+                              // Elegant blueprint vector display if photo asset is unrendered
+                              return Container(
+                                color: Colors.grey.shade100,
+                                padding: const EdgeInsets.all(16),
+                                child: Column(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Icon(Icons.image_rounded, size: 40, color: Colors.grey.shade400),
+                                    const SizedBox(height: 8),
+                                    Text(
+                                      "Add to assets: \n$expectedAssetPath",
+                                      textAlign: TextAlign.center,
+                                      style: TextStyle(fontSize: 10, color: Colors.grey.shade600, fontFamily: 'monospace'),
+                                    )
+                                  ],
+                                ),
+                              );
+                            },
+                          ),
+                          Container(
+                            decoration: const BoxDecoration(
+                              gradient: LinearGradient(
+                                // FIXED: Replaced non-existent Colors.black70 with Colors.black87
+                                colors: [Colors.transparent, Colors.black87],
+                                begin: Alignment.topCenter,
+                                end: Alignment.bottomCenter,
+                              ),
+                            ),
+                          ),
+                          Positioned(
+                            left: 16, bottom: 16, right: 16,
+                            child: Text(
+                              "${_galleryCategories[_selectedGalleryCategory]['label']} Feature Frame #${index + 1}",
+                              style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13),
+                            ),
+                          )
+                        ],
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
+            const SizedBox(height: 24),
+
+            // ==========================================
+            // 9. OPPORTUNITIES SECTION
+            // ==========================================
+            _buildSectionHeader(title: "Opportunities for Residents", sectionKey: _opportunitiesKey),
+            SizedBox(
+              height: 150,
+              child: ListView(
+                scrollDirection: Axis.horizontal,
+                padding: const EdgeInsets.symmetric(horizontal: 24),
+                children: [
+                  _buildOpportunityCard("Bursaries & Scholarships", "Higher Education Support Maps", Icons.monetization_on_rounded),
+                  _buildOpportunityCard("Local Technical Internships", "County Infrastructure Nodes", Icons.card_membership_rounded),
+                  _buildOpportunityCard("Public Service Job Postings", "Administrative Assistance Hubs", Icons.work_rounded),
+                  _buildOpportunityCard("Women Empowerment Programs", "Micro-Financing Trade Tools", Icons.assignment_ind_rounded),
+                ],
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+              child: OutlinedButton(
+                style: OutlinedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  side: const BorderSide(color: Color(0xFF004D40)),
+                ),
+                onPressed: () {},
+                child: const Text("View All Opportunities", style: TextStyle(color: Color(0xFF004D40), fontWeight: FontWeight.bold)),
+              ),
+            ),
+
+            // ==========================================
+            // 10. CULTURE AND HERITAGE
+            // ==========================================
+            _buildSectionHeader(title: "Our Culture"),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 24.0),
+              child: GridView.count(
+                crossAxisCount: 2,
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                mainAxisSpacing: 10,
+                crossAxisSpacing: 10,
+                childAspectRatio: 1.4,
+                children: [
+                  _buildCultureItem("Traditions & Celebrations", Icons.gavel_rounded),
+                  _buildCultureItem("Local Languages", Icons.translate_rounded),
+                  _buildCultureItem("Community Values", Icons.favorite_rounded),
+                  _buildCultureItem("Historical Landmarks", Icons.account_balance_rounded),
+                ],
+              ),
+            ),
+            const SizedBox(height: 24),
+
+            // ==========================================
+            // 11. COMMUNITY IMPACT SECTION
+            // ==========================================
+            Container(
+              margin: const EdgeInsets.all(24),
+              padding: const EdgeInsets.all(24),
+              decoration: BoxDecoration(
+                color: const Color(0xFF004D40),
+                borderRadius: BorderRadius.circular(24),
+              ),
+              child: Column(
+                children: [
+                  const Text(
+                    "Building a Better Rabai Together",
+                    style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
                   ),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.end,
+                  const SizedBox(height: 20),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceAround,
                     children: [
-                      Text('+254 725 409 996', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: primaryColor)),
-                      const SizedBox(height: 2),
-                      Text('omaryw003@gmail.com', style: TextStyle(fontSize: 12, color: Colors.grey.shade600, decoration: TextDecoration.underline)),
+                      _buildImpactCounter("4,500+", "Students Supported"),
+                      _buildImpactCounter("32+", "Development Projects"),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceAround,
+                    children: [
+                      _buildImpactCounter("12+", "Community Programs"),
+                      _buildImpactCounter("18,000+", "Beneficiaries Reached"),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+
+            // ==========================================
+            // 12. INTERACTIVE FEEDBACK FORM SECTION
+            // ==========================================
+            _buildSectionHeader(title: "Your Voice Matters", sectionKey: _feedbackKey),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 24.0),
+              child: Container(
+                padding: const EdgeInsets.all(24),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(color: Colors.grey.shade200),
+                  boxShadow: [
+                    BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 10, offset: const Offset(0, 4))
+                  ]
+                ),
+                child: Form(
+                  key: _formKey,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Text(
+                        "Share your ideas, suggestions and concerns to help improve our constituency.",
+                        style: TextStyle(fontSize: 13, color: Colors.grey.shade700, height: 1.4),
+                      ),
+                      const SizedBox(height: 18),
+                      TextFormField(
+                        controller: _nameController,
+                        decoration: _buildInputDecoration("Full Name", Icons.person_outline_rounded),
+                        validator: (value) => (value == null || value.trim().isEmpty) ? "Please type your name" : null,
+                      ),
+                      const SizedBox(height: 12),
+                      TextFormField(
+                        controller: _emailController,
+                        keyboardType: TextInputType.emailAddress,
+                        decoration: _buildInputDecoration("Email Address / Contact", Icons.alternate_email_rounded),
+                        validator: (value) => (value == null || value.contains('@') == false) ? "Provide a valid email layout" : null,
+                      ),
+                      const SizedBox(height: 12),
+                      TextFormField(
+                        controller: _messageController,
+                        maxLines: 4,
+                        decoration: _buildInputDecoration("Your Message / Concern", Icons.chat_bubble_outline_rounded),
+                        validator: (value) => (value == null || value.trim().length < 5) ? "Please extend your statement details" : null,
+                      ),
+                      const SizedBox(height: 16),
+                      ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF004D40),
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        ),
+                        onPressed: () {
+                          if (_formKey.currentState!.validate()) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text("Processing feedback entry into the public queue..."),
+                                backgroundColor: Color(0xFF004D40),
+                              ),
+                            );
+                            _nameController.clear();
+                            _emailController.clear();
+                            _messageController.clear();
+                          }
+                        },
+                        child: const Text("Submit Feedback Entry", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: 40),
+
+            // ==========================================
+            // 13. COMPREHENSIVE FOOTER SECTION
+            // ==========================================
+            Container(
+              color: Colors.grey.shade900,
+              padding: const EdgeInsets.all(24),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text("My Rabai", style: TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold)),
+                  const Text(
+                    '"Connecting. Informing. Empowering."', 
+                    style: TextStyle(color: Colors.white60, fontSize: 12, fontStyle: FontStyle.italic),
+                  ),
+                  const SizedBox(height: 20),
+                  
+                  // Contact Meta Coordinates block
+                  const Text("OFFICIAL CONSTITUENCY CONTACTS", style: TextStyle(color: Colors.amber, fontSize: 10, fontWeight: FontWeight.bold, letterSpacing: 1)),
+                  const SizedBox(height: 6),
+                  const Row(
+                    children: [
+                      Icon(Icons.phone_android_rounded, size: 14, color: Colors.white70),
+                      SizedBox(width: 8),
+                      Text("+254 700 000000 / +254 711 000000", style: TextStyle(color: Colors.white70, fontSize: 12)),
+                    ],
+                  ),
+                  const SizedBox(height: 4),
+                  const Row(
+                    children: [
+                      Icon(Icons.email_outlined, size: 14, color: Colors.white70),
+                      SizedBox(width: 8),
+                      Text("info@rabai.go.ke / support@rabai.go.ke", style: TextStyle(color: Colors.white70, fontSize: 12)),
+                    ],
+                  ),
+                  
+                  const Divider(color: Colors.white12, height: 32),
+                  const Text("QUICK LINKS NAVIGATION", style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold, letterSpacing: 1)),
+                  const SizedBox(height: 10),
+                  
+                  // Interactive Quick links mapping directly back to view states
+                  Wrap(
+                    spacing: 16,
+                    runSpacing: 10,
+                    children: [
+                      _buildFooterLink("News", () => _scrollToSection(_leadershipKey)),
+                      _buildFooterLink("Projects", () => _scrollToSection(_discoverKey)),
+                      _buildFooterLink("Opportunities", () => _scrollToSection(_opportunitiesKey)),
+                      _buildFooterLink("Feedback Portal", () => _scrollToSection(_feedbackKey)),
+                    ],
+                  ),
+                  const Divider(color: Colors.white12, height: 32),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text("© 2026 Constituency Development", style: TextStyle(color: Colors.white38, fontSize: 11)),
+                      Row(
+                        children: [Icons.facebook_rounded, Icons.language_rounded, Icons.alternate_email_rounded].map((icon) => Padding(
+                          padding: const EdgeInsets.only(left: 12.0),
+                          child: Icon(icon, color: Colors.white54, size: 18),
+                        )).toList(),
+                      )
                     ],
                   )
                 ],
               ),
-              const SizedBox(height: 48),
+            ),
 
-              Center(
-                child: Column(
-                  children: [
-                    Text(
-                      '“ A transparent, empowered, and unified community. ”',
-                      style: TextStyle(fontSize: 13, fontStyle: FontStyle.italic, color: Colors.grey.shade600, fontWeight: FontWeight.w500),
-                    ),
-                    const SizedBox(height: 12),
-                    Divider(color: Colors.grey.shade200, thickness: 1),
-                    const SizedBox(height: 12),
-                    Text(
-                      'Somali & Rabai Community System Context Portal',
-                      style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.grey.shade400, letterSpacing: 0.5),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      '© 2026 Developed by Omar Washe Konde. All Rights Reserved.',
-                      style: TextStyle(fontSize: 10, color: Colors.grey.shade400),
-                    ),
-                    const SizedBox(height: 24),
-                  ],
-                ),
-              ),
-            ],
-          ),
+          ],
         ),
       ),
     );
   }
 
-  Widget _buildMatrixCard(
-    BuildContext context, {
-    required String title, 
-    required String subtitle, 
-    required IconData icon, 
-    required Color color,
-    required Widget destination,
-  }) {
+  // Visual Utility Helpers
+  Widget _buildSectionHeader({required String title, GlobalKey? sectionKey}) {
+    return Padding(
+      key: sectionKey,
+      padding: const EdgeInsets.only(left: 24.0, right: 24.0, top: 28, bottom: 14),
+      child: Text(
+        title,
+        style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w900, letterSpacing: -0.5, color: Colors.black87),
+      ),
+    );
+  }
+
+  InputDecoration _buildInputDecoration(String hint, IconData icon) {
+    return InputDecoration(
+      prefixIcon: Icon(icon, size: 18, color: const Color(0xFF004D40)),
+      hintText: hint,
+      hintStyle: const TextStyle(fontSize: 12, color: Colors.grey),
+      filled: true,
+      fillColor: const Color(0xFFF8F9FA),
+      contentPadding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+      enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: Colors.grey.shade200)),
+      focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: Color(0xFF004D40))),
+      errorBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: Colors.red.shade200)),
+      focusedErrorBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: Colors.red.shade700)),
+    );
+  }
+
+  Widget _buildFooterLink(String text, VoidCallback onTap) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(4),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 4.0, horizontal: 2.0),
+        child: Text(
+          text,
+          style: const TextStyle(color: Color(0xFFB2DFDB), fontSize: 12, fontWeight: FontWeight.w600, decoration: TextDecoration.underline),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildLeadershipCard({required String title, required String role, required String content, required String imageAssetPath}) {
     return Container(
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: Colors.grey.shade200),
-        boxShadow: [BoxShadow(color: Colors.grey.withOpacity(0.03), blurRadius: 8, offset: const Offset(0, 4))]
       ),
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          borderRadius: BorderRadius.circular(16),
-          onTap: () {
-            Navigator.push(context, MaterialPageRoute(builder: (context) => destination));
-          },
-          child: Padding(
-            padding: const EdgeInsets.all(14.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                CircleAvatar(radius: 18, backgroundColor: color.withOpacity(0.1), child: Icon(icon, color: color, size: 20)),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(title, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.black87)),
-                    const SizedBox(height: 2),
-                    Text(subtitle, style: TextStyle(fontSize: 11, color: Colors.grey.shade500)),
-                  ],
-                ),
-              ],
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          ClipRRect(
+            borderRadius: BorderRadius.circular(12),
+            child: Container(
+              width: 75, height: 95,
+              color: const Color(0xFFE0F2F1),
+              child: Image.asset(
+                imageAssetPath,
+                fit: BoxFit.cover,
+                errorBuilder: (context, error, stackTrace) {
+                  return const Icon(Icons.person_rounded, color: Color(0xFF004D40), size: 36);
+                },
+              ),
             ),
           ),
-        ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(role, style: TextStyle(color: Colors.amber.shade800, fontSize: 9, fontWeight: FontWeight.bold, letterSpacing: 0.5)),
+                Text(title, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.black87)),
+                const SizedBox(height: 4),
+                Text(content, style: TextStyle(fontSize: 12, color: Colors.grey.shade600, height: 1.35), maxLines: 3, overflow: TextOverflow.ellipsis),
+                TextButton(
+                  style: TextButton.styleFrom(padding: EdgeInsets.zero, minimumSize: const Size(0, 30), tapTargetSize: MaterialTapTargetSize.shrinkWrap),
+                  onPressed: () {},
+                  child: const Text("Read Full Message →", style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF004D40))),
+                )
+              ],
+            ),
+          )
+        ],
       ),
     );
   }
 
-  Widget _buildGalleryTile(String imageUrl, double height, String label) {
+  Widget _buildExpandableCard({required int index, required String title, required IconData icon, required String description, required String extendedText}) {
+    bool expanded = _isCardExpanded[index];
     return Container(
-      height: height,
-      width: double.infinity,
+      margin: const EdgeInsets.only(bottom: 10),
       decoration: BoxDecoration(
-        color: Colors.grey.shade200,
-        borderRadius: BorderRadius.circular(16),
-        image: DecorationImage(image: NetworkImage(imageUrl), fit: BoxFit.cover),
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: expanded ? const Color(0xFF004D40) : Colors.grey.shade200, width: expanded ? 1.5 : 1.0),
       ),
-      alignment: Alignment.bottomLeft,
-      padding: const EdgeInsets.all(12),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-        decoration: BoxDecoration(color: Colors.black.withOpacity(0.6), borderRadius: BorderRadius.circular(8)),
-        child: Text(label, style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.w500)),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          ListTile(
+            onTap: () => setState(() => _isCardExpanded[index] = !expanded),
+            leading: Icon(icon, color: expanded ? const Color(0xFF004D40) : Colors.black45),
+            title: Text(title, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
+            trailing: Icon(expanded ? Icons.keyboard_arrow_up_rounded : Icons.keyboard_arrow_down_rounded),
+          ),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16.0),
+            child: Text(description, style: TextStyle(fontSize: 12, color: Colors.grey.shade600)),
+          ),
+          AnimatedContainer(
+            duration: const Duration(milliseconds: 200),
+            height: expanded ? 75 : 0,
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            child: ClipRect(
+              child: SingleChildScrollView(
+                physics: const NeverScrollableScrollPhysics(),
+                child: Text(extendedText, style: const TextStyle(fontSize: 12, color: Colors.black87, height: 1.3)),
+              ),
+            ),
+          ),
+          const SizedBox(height: 12),
+        ],
       ),
     );
   }
-}
 
-// ====================================================================
-// REMAINING UTILITY DESTINATIONS
-// ====================================================================
-
-class PublicFeedbackPage extends StatelessWidget {
-  const PublicFeedbackPage({super.key});
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('PUBLIC FEEDBACK & GRIEVANCES')),
-      body: const Center(child: Text('Lodge official complaints, suggestions, or ward-specific reports.')),
+  Widget _buildEconomicCard(IconData icon, String title, String desc) {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(14), border: Border.all(color: Colors.grey.shade100)),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(icon, color: const Color(0xFF004D40), size: 28),
+          const SizedBox(height: 8),
+          Text(title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Colors.black87)),
+          const SizedBox(height: 4),
+          Expanded(child: Text(desc, style: const TextStyle(fontSize: 11, color: Colors.grey, height: 1.3), maxLines: 3, overflow: TextOverflow.ellipsis)),
+        ],
+      ),
     );
   }
-}
 
-class OpportunitiesPage extends StatelessWidget {
-  const OpportunitiesPage({super.key});
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('PUBLIC OPPORTUNITIES')),
-      body: const Center(child: Text('Active Ward Tenders, Vacancies, and Youth Program Intakes')),
+  Widget _buildStatCard(String val, String label, IconData icon, Color col) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(14), border: Border.all(color: Colors.grey.shade200)),
+      child: Row(
+        children: [
+          Icon(icon, color: col, size: 24),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(val, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.black87)),
+                Text(label, style: const TextStyle(fontSize: 11, color: Colors.grey, height: 1.1)),
+              ],
+            ),
+          )
+        ],
+      ),
     );
   }
-}
 
-class EmergencyDeskPage extends StatelessWidget {
-  const EmergencyDeskPage({super.key});
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('EMERGENCY SUPPORT DESK')),
-      body: const Center(child: Text('Immediate Sub-County Emergency Hotline Matrix and Helpdesk Contacts')),
+  Widget _buildHealthcareCard(String name, String desc, IconData icon) {
+    return Container(
+      width: 240,
+      margin: const EdgeInsets.only(right: 12),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16), border: Border.all(color: Colors.grey.shade200)),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(icon, color: Colors.red.shade700, size: 30),
+          const SizedBox(height: 10),
+          Text(name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13), maxLines: 1, overflow: TextOverflow.ellipsis),
+          const SizedBox(height: 4),
+          Text(desc, style: const TextStyle(fontSize: 11, color: Colors.grey, height: 1.3), maxLines: 3, overflow: TextOverflow.ellipsis),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildProgressRow(String title, double value, String status) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(title, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+            Text(status, style: const TextStyle(fontSize: 11, color: Colors.grey)),
+          ],
+        ),
+        const SizedBox(height: 6),
+        LinearProgressIndicator(value: value, backgroundColor: Colors.grey.shade100, color: const Color(0xFF004D40), minHeight: 6),
+      ],
+    );
+  }
+
+  Widget _buildOpportunityCard(String title, String dept, IconData icon) {
+    return Container(
+      width: 200,
+      margin: const EdgeInsets.only(right: 10),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(14), border: Border.all(color: Colors.grey.shade200)),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(icon, color: Colors.amber.shade800, size: 24),
+          const SizedBox(height: 8),
+          Text(title, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold), maxLines: 1, overflow: TextOverflow.ellipsis),
+          Text(dept, style: const TextStyle(fontSize: 11, color: Colors.grey)),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCultureItem(String label, IconData icon) {
+    return Container(
+      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(12), border: Border.all(color: Colors.grey.shade100)),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(icon, color: Colors.blueGrey),
+          const SizedBox(width: 8),
+          Text(label, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildImpactCounter(String num, String label) {
+    return Column(
+      children: [
+        Text(num, style: const TextStyle(color: Colors.amber, fontSize: 20, fontWeight: FontWeight.bold)),
+        Text(label, style: const TextStyle(color: Colors.white70, fontSize: 11)),
+      ],
     );
   }
 }
